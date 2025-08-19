@@ -1,3 +1,4 @@
+# utils/error_tracker.py
 """Centralized unhandled exception tracking."""
 
 from __future__ import annotations
@@ -6,23 +7,15 @@ import os
 import signal
 import sys
 import traceback
-from typing import Any, Callable, List, Optional, TYPE_CHECKING
+from typing import Any, Callable, List, Optional
 
 from .logger import Logger
-
-
-class CameraError(Exception):
-    """Base class for camera related errors."""
-
-
-class CameraConnectionError(CameraError):
-    """Raised when the camera device cannot be opened."""
 
 
 class ErrorTracker:
     """Installable global exception hook that logs uncaught errors."""
 
-    logger = Logger.get_logger("utils.error_tracker")
+    logger = Logger.get_logger("error_tracker")
     _installed = False
     _orig_hook: Optional[Callable[..., None]] = None
     _cleanup_funcs: List[Callable[[], None]] = []
@@ -46,8 +39,13 @@ class ErrorTracker:
         cls.stop_keyboard_listener()
 
     @classmethod
-    def install_excepthook(cls) -> None:
-        """Log unhandled exceptions through the project logger."""
+    def install_excepthook(cls, forward_to_default: bool = False) -> None:
+        """Log unhandled exceptions through the project logger only once.
+
+        Args:
+            forward_to_default: if True, also call the original sys.excepthook
+                (will print traceback to stderr). Defaults to False.
+        """
         if cls._installed:
             return
 
@@ -57,7 +55,7 @@ class ErrorTracker:
             message = "".join(traceback.format_exception(exc_type, exc, tb))
             cls.logger.error(f"Unhandled exception:\n{message}")
             cls._run_cleanup()
-            if cls._orig_hook:
+            if forward_to_default and cls._orig_hook:
                 cls._orig_hook(exc_type, exc, tb)
 
         sys.excepthook = _hook
@@ -99,7 +97,9 @@ class ErrorTracker:
         cls._keyboard_listener.start()
         cls._terminal_echo = TerminalEchoSuppressor()
         cls._terminal_echo.start()
-        cls.logger.debug(f"Keyboard listener installed for keys: {list(hotkeys)}")
+        cls.logger.debug(
+            f"Keyboard listener installed for keys: {list(hotkeys)}"
+        )
 
     @classmethod
     def stop_keyboard_listener(cls) -> None:

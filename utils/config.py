@@ -1,4 +1,4 @@
-# config.py
+# utils/config.py
 from __future__ import annotations
 
 from dataclasses import dataclass
@@ -74,7 +74,9 @@ class HandEye:
         elif self.direction == "cam_tcp_inv":
             return np.linalg.inv(self.T_cam_tcp)
         else:
-            raise ValueError("HandEye.direction must be 'tcp_cam' or 'cam_tcp_inv'")
+            raise ValueError(
+                "HandEye.direction must be 'tcp_cam' or 'cam_tcp_inv'"
+            )
 
 
 # ============================== PROJECT DEFAULTS =============================

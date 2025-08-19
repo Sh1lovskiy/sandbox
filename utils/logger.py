@@ -20,6 +20,9 @@ T = TypeVar("T")
 
 # ============================== CONFIG =======================================
 
+MODULE_W = 5
+LINE_W = 3
+
 
 @dataclass(frozen=True)
 class LoggingCfg:
@@ -31,10 +34,16 @@ class LoggingCfg:
     log_format: str = (
         "<green>{time:MM-DD HH:mm:ss}</green>"
         "[<level>{level:.3}</level>]"
-        "[<cyan>{extra[module]:.16}</cyan>:<cyan>{line:<3}</cyan>]"
+        f"[<cyan>{{extra[module]:<{MODULE_W}.{MODULE_W}}}</cyan>:"
+        f"<cyan>{{line:>{LINE_W}}}</cyan>] "
         "<level>{message}</level>"
     )
-    log_file_format: str = "{time:YYYY-MM-DD HH:mm:ss}[{level}][{file}:{line}]{message}"
+    # file logs are JSON (serialize=True), so this format is unused in practice.
+    log_file_format: str = (
+        f"{{time:YYYY-MM-DD HH:mm:ss}}[{{level:.3}}]"
+        f"[{{extra[module]:<{MODULE_W}.{MODULE_W}}}:{{line:>{LINE_W}}}] "
+        "{{message}}"
+    )
     progress_bar_format: str = (
         "{l_bar}{bar}| {n_fmt}/{total_fmt} [{elapsed}<{remaining}]"
     )

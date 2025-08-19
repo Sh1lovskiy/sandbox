@@ -1,3 +1,4 @@
+# utils/io.py
 import json
 from logging import Logger
 from pathlib import Path
@@ -5,11 +6,10 @@ from typing import Dict, Tuple
 
 import numpy as np
 
-from merge import Pose
-from utils.config import CameraDefaults
+from utils.config import CameraDefaults, Pose
+from utils.logger import Logger
 
-
-logger = Logger.get_logger("utils.helpers")
+logger = Logger.get_logger("io")
 np.set_printoptions(suppress=True, precision=6, linewidth=180)
 
 
@@ -40,29 +40,36 @@ def load_poses(path: Path) -> Dict[str, Pose]:
 
 
 def load_intrinsics_from_json(
-    root: Path, fallback: CameraDefaults, name: str = "intrinsics.json"
+    root: Path, fallback: "CameraDefaults", name: str = "rs2_params.json"
 ) -> Tuple[int, int, float, float, float, float]:
     """
     Read intrinsics JSON next to capture root.
-    Returns (w, h, fx, fy, cx, cy). Falls back to provided defaults if missing/bad.
+    Returns (w, h, fx, fy, cx, cy) for RGB (color) stream.
+    Falls back to provided defaults if missing/bad.
     """
+
     p = root / name
     if p.exists():
         try:
             y = json.loads(p.read_text())
-            w = int(y.get("width", fallback.width))
-            h = int(y.get("height", fallback.height))
-            fx = float(y.get("fx", fallback.fx))
-            fy = float(y.get("fy", fallback.fy))
-            cx = float(y.get("cx", fallback.cx))
-            cy = float(y.get("cy", fallback.cy))
+            color = y.get("intrinsics", {}).get("color", {})
+
+            w = int(color.get("width", fallback.width))
+            h = int(color.get("height", fallback.height))
+            fx = float(color.get("fx", fallback.fx))
+            fy = float(color.get("fy", fallback.fy))
+            cx = float(color.get("ppx", fallback.cx))
+            cy = float(color.get("ppy", fallback.cy))
+
             logger.info(
-                f"[INTR JSON] {p.name}: w={w} h={h} fx={fx:.3f} fy={fy:.3f} cx={cx:.3f} cy={cy:.3f}"
+                f"[INTR JSON] {p.name}: w={w} h={h} fx={fx:.3f} fy={fy:.3f} "
+                f"cx={cx:.3f} cy={cy:.3f}"
             )
             return (w, h, fx, fy, cx, cy)
+
         except Exception as e:
             logger.warning(f"[INTR JSON] parse failed: {e}")
-    # fallback
+
     return (
         fallback.width,
         fallback.height,

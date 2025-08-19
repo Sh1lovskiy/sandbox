@@ -1,3 +1,4 @@
+# utils/keyboard.py
 """Global hotkey utilities used by CLI tools."""
 
 from __future__ import annotations
@@ -7,7 +8,7 @@ import termios
 from typing import Callable, Dict, List, Optional
 
 from pynput import keyboard
-from logger import Logger
+from .logger import Logger
 
 KeyAction = Callable[[], None]
 
@@ -15,10 +16,12 @@ KeyAction = Callable[[], None]
 class GlobalKeyListener:
     """Listen for global hotkeys and suppress terminal output."""
 
-    def __init__(self, hotkeys: Dict[str, KeyAction], *, suppress: bool = True) -> None:
+    def __init__(
+        self, hotkeys: Dict[str, KeyAction], *, suppress: bool = False
+    ) -> None:
         """Set up hotkey callbacks and configure pynput listener."""
 
-        self.logger = Logger.get_logger("utils.keyboard")
+        self.logger = Logger.get_logger("keyboard")
         self.hotkeys = hotkeys
         self.listener = keyboard.GlobalHotKeys(hotkeys, suppress=suppress)
         self.listener.daemon = True
@@ -26,7 +29,9 @@ class GlobalKeyListener:
     def start(self) -> None:
         """Start listening for configured hotkeys."""
         self.listener.start()
-        self.logger.debug(f"GlobalKeyListener started with keys: {list(self.hotkeys)}")
+        self.logger.debug(
+            f"GlobalKeyListener started with keys: {list(self.hotkeys)}"
+        )
 
     def stop(self) -> None:
         """Stop the hotkey listener."""

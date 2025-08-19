@@ -1,24 +1,15 @@
-# utils.py
+# utils/helpers.py
 from __future__ import annotations
 
-import json
 import math
-from pathlib import Path
-from typing import Dict, Tuple
-
 import numpy as np
 
-from config import (
-    CameraDefaults,
-    Pose,
-)
-
-from logger import Logger, CaptureStderrToLogger, SuppressO3DInfo
+from .logger import Logger, CaptureStderrToLogger, SuppressO3DInfo
 
 # ============================================================================ #
 # Logger / numpy
 # ============================================================================ #
-logger = Logger.get_logger("utils.helpers")
+logger = Logger.get_logger("helpers")
 np.set_printoptions(suppress=True, precision=6, linewidth=180)
 
 
@@ -30,7 +21,9 @@ def setup_numpy_print(precision: int = 6, linewidth: int = 180) -> None:
 # ============================================================================ #
 # Math: rotations, transforms, formatting
 # ============================================================================ #
-def euler_deg_to_R(rx: float, ry: float, rz: float, order: str = "XYZ") -> np.ndarray:
+def euler_deg_to_R(
+    rx: float, ry: float, rz: float, order: str = "XYZ"
+) -> np.ndarray:
     """Euler angles in degrees -> 3x3 rotation matrix (right-multiplied)."""
     rx, ry, rz = map(math.radians, (rx, ry, rz))
     Rx = np.array(
