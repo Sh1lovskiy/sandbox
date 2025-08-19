@@ -67,3 +67,4 @@ logs/
 # Explicit Inclusions
 # ===========================
 !.data/params/rs2_params.json
+!.data_clouds/final_merged_xyzrgbn.gz
