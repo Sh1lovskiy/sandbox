@@ -50,7 +50,6 @@ logs/
 # Data: Images & Clouds
 # ===========================
 .data_captures/
-.data_clouds/
 
 # ===========================
 # Image & Data Files
@@ -66,5 +65,5 @@ logs/
 # ===========================
 # Explicit Inclusions
 # ===========================
-!.data/params/rs2_params.json
+!.data_captures/rs2_params.json
 !.data_clouds/final_merged_xyzrgbn.gz

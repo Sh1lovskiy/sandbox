@@ -99,7 +99,7 @@ CAMERA_FALLBACK = CameraDefaults(
     cy=360.0,
 )
 
-# Hand–eye: store as separate R and t (meters). Default direction is TCP <- CAM.
+# Hand-eye: store as separate R and t (meters). Default direction is TCP <- CAM.
 HAND_EYE = HandEye(
     R=np.array(
         [

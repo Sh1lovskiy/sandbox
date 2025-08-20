@@ -1,3 +1,4 @@
+# merge/export.py
 from __future__ import annotations
 
 import json
@@ -21,9 +22,9 @@ def save_cloud(
     out_path = out_dir / name
     ok = o3d.io.write_point_cloud(str(out_path), cloud)
     if ok:
-        LOG.info(f"[SAVE] {out_path}")
+        LOG.info(f"Save {out_path}")
     else:
-        LOG.warning(f"[SAVE] failed: {out_path}")
+        LOG.warning(f"Save failed: {out_path}")
     return out_path
 
 
@@ -76,11 +77,11 @@ def interactive_picks_and_save(
 
     vis = o3d.visualization.VisualizerWithEditing()
     vis.create_window(
-        window_name="FINAL - edit & save picks", width=1280, height=800
+        window_name="Final edit & save picks", width=1280, height=800
     )
     vis.add_geometry(cloud)
     vis.run()
     vis.destroy_window()
     picks = vis.get_picked_points()
-    LOG.info(f"[PICKS] {len(picks)} points")
+    LOG.info(f"Picks {len(picks)} points")
     _write_picks_bundle(picks, cloud, out_dir, prefix, sphere_r=0.004)

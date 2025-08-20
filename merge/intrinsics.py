@@ -1,3 +1,4 @@
+# merge/intrinsics.py
 from __future__ import annotations
 
 from pathlib import Path
@@ -24,6 +25,6 @@ def build_intrinsics(root: Path) -> o3d.camera.PinholeCameraIntrinsic:
     """Prefer JSON intrinsics near capture root; fallback to defaults."""
     intr = load_intrinsics_from_json(root, CAMERA_FALLBACK)
     LOG.info(
-        f"[INTR] w={intr[0]} h={intr[1]} fx={intr[2]:.3f} fy={intr[3]:.3f} cx={intr[4]:.3f} cy={intr[5]:.3f}"
+        f"w={intr[0]} h={intr[1]} fx={intr[2]:.3f} fy={intr[3]:.3f} cx={intr[4]:.3f} cy={intr[5]:.3f}"
     )
     return _tuple_to_intrinsics(intr)

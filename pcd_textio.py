@@ -34,7 +34,7 @@ from utils.error_tracker import ErrorTracker
 
 # -------------------------- Configuration ------------------------------------
 
-MODE = "export"  # "export" | "view"
+MODE = "view"  # "export" | "view"
 
 # Paths (project-relative; adjust if needed)
 PLY_IN = Path(".data_captures/debug/final_merged.ply")
@@ -184,7 +184,7 @@ def export_ply_to_text_gz(ply_in: Path, txt_gz_out: Path) -> None:
 
     log.info(f"Writing gz text: {txt_gz_out}")
     _write_gz_lines(txt_gz_out, lines)
-    log.info("Done.")
+    log.info("Done")
 
 
 # -------------------------- View: text.gz -> viewer ---------------------------
@@ -242,7 +242,7 @@ def visualize_text_gz(path: Path) -> None:
         left=100,
         top=80,
     )
-    log.info("Closed.")
+    log.info("Closed")
 
 
 # ------------------------------- Entrypoint -----------------------------------
