@@ -21,8 +21,9 @@ def save_cloud(
     out_dir.mkdir(parents=True, exist_ok=True)
     out_path = out_dir / name
     ok = o3d.io.write_point_cloud(str(out_path), cloud)
+    n_final = len(cloud.points)
     if ok:
-        LOG.info(f"Save {out_path}")
+        LOG.info(f"Save wrote {n_final} points to {out_path}")
     else:
         LOG.warning(f"Save failed: {out_path}")
     return out_path

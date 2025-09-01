@@ -40,6 +40,22 @@ class Skel3DCfg:
 
 
 @dataclass(frozen=True)
+class GraphCfg:
+    node_merge_radius_m: float = 0.004
+    min_branch_length_m: float = 0.01
+
+
+@dataclass(frozen=True)
+class NodeRefineCfg:
+    bridge_width_est: float = 0.07
+    search_radius: float = 0.03
+    min_side_pts: int = 20
+    normal_radius: float = 0.012
+    normal_max_nn: int = 60
+    merge_radius_m: float = 0.004
+
+
+@dataclass(frozen=True)
 class Skel2DCfg:
     ds_vox_seg: float = 0.0035
     dist_schedule: Tuple[float, ...] = (0.003, 0.005, 0.008, 0.012, 0.02)
@@ -60,9 +76,9 @@ class NodeRefineCfg:
     bridge_width_est: float = 0.07
     search_radius: float = 0.03
     min_side_pts: int = 20
-    normal_radius: float = 0.012
+    normal_radius: float = 0.007
     normal_max_nn: int = 60
-    merge_radius_m: float = 0.010
+    merge_radius_m: float = 0.005
 
 
 @dataclass(frozen=True)
@@ -132,7 +148,7 @@ class ViewerCfg:
     window: Tuple[int, int] = (1280, 800)
     title_prefix: str = "Skeleton"
     side_regions_as_mesh: bool = False
-    mesh_ball_pivot_r: float = 0.010
+    mesh_ball_pivot_r: float = 0.005
     mesh_decimate_target: int = 40_000
     side_regions_as_mesh: bool = True
     show_boundary_points: bool = True
@@ -140,7 +156,7 @@ class ViewerCfg:
 
 @dataclass(frozen=True)
 class SkelPipelineCfg:
-    mode: SkelMode = "vol3d"
+    mode: SkelMode = "plane2d"
     capture_root: str = str(ucfg.CAPTURE_ROOT)
     input_cloud_path: str | None = None
     smoothing: SmoothingCfg = SmoothingCfg()

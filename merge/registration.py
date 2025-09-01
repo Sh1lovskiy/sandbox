@@ -213,7 +213,9 @@ def pairwise_refine(
 
     if not params.use_colored_icp:
         return Ticp
-
+    if fit < 0.2:
+        LOG.warning(f"[REFINE] ICP fit too low ({fit:.3f}) -> skip refine")
+        return np.eye(4)
     return colored_icp_multiscale(
         chunk,
         reference,

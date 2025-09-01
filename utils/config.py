@@ -82,12 +82,12 @@ class HandEye:
 # ============================== PROJECT DEFAULTS =============================
 
 # Where a single capture lives (code can override this)
-CAPTURE_ROOT: Path = Path(".data_captures")
+CAPTURE_ROOT: Path = Path(".data_captures/first")
 
 # Subpaths & filenames inside a capture
 IMG_DIR_NAME: str = "imgs"  # e.g. imgs/000_rgb.png, imgs/000_depth.npy
 POSES_JSON: str = "poses.json"  # robot TCP poses (BASE) per frame
-INTRINSICS_JSON: str = "intrinsics.json"  # camera intrinsics (optional)
+INTRINSICS_JSON: str = "rs2_params.json"  # camera intrinsics (optional)
 
 # Fallback intrinsics if JSON/YAML not present (do NOT do IO here).
 CAMERA_FALLBACK = CameraDefaults(
@@ -123,7 +123,15 @@ BBOX_POINTS = np.array(
     ],
     dtype=np.float64,
 )
-
+# BBOX_POINTS = np.array(
+#     [
+#         [-0.1, -0.3, 0.20],
+#         [-0.1, -0.3, 0.013],
+#         [-0.4, 0.15, 0.013],
+#         [-0.4, 0.15, 0.20],
+#     ],
+#     dtype=np.float64,
+# )
 # Depth handling defaults that callers may use.
 DEPTH_TRUNC: float = 2.5
 DEPTH_UNIT_MODE: str = "auto"  # "auto" | "meters" | "millimeters"

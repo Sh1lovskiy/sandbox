@@ -20,6 +20,7 @@ from vision.skeleton.skeleton3d import (
     skeletonize_3d,
     skeleton_nodes_vox,
     skeleton_to_polylines_3d,
+    skeleton_graph_vox,
     vox_to_world,
 )
 from vision.skeleton.skeleton2d import (
@@ -121,6 +122,21 @@ def _smooth_if_enabled(raw: o3d.geometry.PointCloud, cfg: SkelPipelineCfg):
     return out, o3d.geometry.PointCloud(raw)
 
 
+def _make_graph_lineset(
+    nodes_xyz: np.ndarray, edges: list[tuple[int, int]], color=(1.0, 0.25, 0.25)
+) -> o3d.geometry.LineSet:
+    ls = o3d.geometry.LineSet()
+    if len(nodes_xyz) == 0 or len(edges) == 0:
+        ls.points = o3d.utility.Vector3dVector(np.zeros((0, 3), float))
+        ls.lines = o3d.utility.Vector2iVector(np.zeros((0, 2), int))
+        return ls
+    ls.points = o3d.utility.Vector3dVector(nodes_xyz)
+    ls.lines = o3d.utility.Vector2iVector(np.asarray(edges, dtype=np.int32))
+    col = np.tile(np.asarray(color, float)[None, :], (len(edges), 1))
+    ls.colors = o3d.utility.Vector3dVector(col)
+    return ls
+
+
 def _resample_all(polys: list[np.ndarray], cfg: SkelPipelineCfg):
     out = []
     for xyz in polys:
@@ -194,6 +210,7 @@ def run(cfg: SkelPipelineCfg | None = None) -> Path | None:
     ErrorTracker.install_signal_handlers()
 
     cfg = cfg or SkelPipelineCfg()
+
     root = Path(cfg.capture_root)
     base_cloud = _load_cloud(cfg)
     LOG.info(f"points: {len(base_cloud.points)}")
@@ -260,7 +277,12 @@ def run(cfg: SkelPipelineCfg | None = None) -> Path | None:
         node_px, edges2d, node_map2d, polylines_px = build_graph_from_2d_skel(
             sk2
         )
-
+        if len(edges2d) > 0 and len(nodes_xyz) > 0:
+            ls_graph_edges = _make_graph_lineset(
+                nodes_xyz, edges2d, color=(1.0, 0.2, 0.2)
+            )
+            nodes_mesh = make_nodes_mesh(nodes_xyz, (1.0, 0.2, 0.2), 0.004)
+            geoms["graph"] = [ls_graph_edges, nodes_mesh]
         nodes_xyz = np.array(
             [
                 px_to_world_2d([rc], u, v, P.mean(0), cfg.sk2d.grid_res, uvmin)[
@@ -295,14 +317,25 @@ def run(cfg: SkelPipelineCfg | None = None) -> Path | None:
         vol = voxelize_points(P, origin, v, dims)
         vol = dilate_3d(vol, cfg.vox.dilate_r)
         sk = skeletonize_3d(vol)
-        if int(sk.sum()) < cfg.vox.min_skel_voxels:
+        vox_count = int(sk.sum())
+        LOG.info(f"skel voxels: {vox_count}")
+        if vox_count < cfg.vox.min_skel_voxels:
             raise RuntimeError(
                 "3D skeleton too small; increase dilation or voxel."
             )
+
         polylines_vox = skeleton_to_polylines_3d(sk)
-        nodes = skeleton_nodes_vox(sk)
+
+        nodes_vox = skeleton_nodes_vox(sk)
+        edges_ij = []
+        try:
+            nodes_vox_list, edges_ij = skeleton_graph_vox(sk)
+            nodes_vox = nodes_vox_list
+        except Exception as e:
+            LOG.warning(f"graph build fallback (nodes only): {e}")
+
         nodes_xyz = np.array(
-            [vox_to_world([n], origin, v)[0] for n in nodes], float
+            [vox_to_world([n], origin, v)[0] for n in nodes_vox], float
         )
         nodes_xyz, _, _ = merge_close_nodes_world(
             nodes_xyz, [], cfg.node_refine.merge_radius_m
@@ -316,6 +349,16 @@ def run(cfg: SkelPipelineCfg | None = None) -> Path | None:
             xyz = vox_to_world(path, origin, v)
             polys_w.append(xyz)
 
+        ls_raw = make_lineset_from_polylines(polys_w, color=(0.0, 1.0, 0.0))
+        geoms["skeleton"] = [ls_raw]
+
+        ls_graph_edges = _make_graph_lineset(
+            nodes_xyz, edges_ij, color=(1.0, 0.2, 0.2)
+        )
+        node_radius = max(0.75 * v, 0.002)
+        nodes_mesh = make_nodes_mesh(nodes_xyz, (1.0, 0.2, 0.2), node_radius)
+        geoms["graph"] = [ls_graph_edges, nodes_mesh]
+
     # resample + centers
     polys_w = _resample_all(polys_w, cfg)
     center_polys = _final_centerlines(polys_w, base, cfg)
@@ -324,8 +367,11 @@ def run(cfg: SkelPipelineCfg | None = None) -> Path | None:
     geoms["centers"] = [ls_centers]
     ls_raw = make_lineset_from_polylines(polys_w, color=(0, 1, 0))
     geoms["skeleton"] = [ls_raw]
+
     if len(nodes_xyz) > 0:
-        geoms["graph"] = [ls_raw, make_nodes_mesh(nodes_xyz, (1, 0, 0), 0.004)]
+        ls_for_graph = make_lineset_from_polylines(polys_w, color=(0, 1, 0))
+        nodes_mesh = make_nodes_mesh(nodes_xyz, (1, 0, 0), 0.004)
+        geoms["graph"] = [ls_for_graph, nodes_mesh]
 
     if ref_plane_n is None:
         ref_plane_n = estimate_dominant_plane_normal(base)

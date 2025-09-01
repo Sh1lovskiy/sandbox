@@ -35,9 +35,95 @@ def _mean_spacing(pc: o3d.geometry.PointCloud, k: int = 12) -> float:
     return float(np.median(d)) if d else 0.005
 
 
+from typing import Iterable, List, Tuple, Union
+
+Geom = Union[o3d.geometry.PointCloud, o3d.geometry.TriangleMesh]
+
+
+def build_side_region_meshes(
+    regions: List[Geom],
+    *,
+    prefer_poisson: bool = False,
+    target: int | None = 30_000,
+) -> List[o3d.geometry.TriangleMesh]:
+    """
+    For each region:
+      - if it's a TriangleMesh -> clean + (optional) decimate.
+      - if it's a PointCloud   -> BPA/Poisson -> clean + (optional) decimate.
+    """
+    meshes: List[o3d.geometry.TriangleMesh] = []
+    for i, g in enumerate(regions):
+        try:
+            if isinstance(g, o3d.geometry.TriangleMesh):
+                m = o3d.geometry.TriangleMesh(g)  # copy
+                # cleanup + mild smoothing
+                m.remove_degenerate_triangles()
+                m.remove_duplicated_triangles()
+                m.remove_duplicated_vertices()
+                m.remove_non_manifold_edges()
+                try:
+                    m = m.filter_smooth_taubin(number_of_iterations=3)
+                except Exception:
+                    pass
+                if target and len(m.triangles) > target:
+                    try:
+                        m = m.simplify_quadric_decimation(int(target))
+                    except Exception:
+                        pass
+                m.compute_vertex_normals()
+                meshes.append(m)
+                continue  # done
+
+            # else: assume PointCloud
+            pc = o3d.geometry.PointCloud(g)
+            if len(pc.points) < 100:
+                meshes.append(o3d.geometry.TriangleMesh())
+                continue
+
+            # normals
+            h = _mean_spacing(pc)
+            _ensure_normals(pc, radius=max(h * 3.0, 0.006))
+
+            # reconstruction
+            try:
+                if prefer_poisson:
+                    raise RuntimeError("force_poisson")
+                radii = [h * 1.5, h * 2.2, h * 3.0]
+                m = o3d.geometry.TriangleMesh.create_from_point_cloud_ball_pivoting(
+                    pc, o3d.utility.DoubleVector(radii)
+                )
+            except Exception as e:
+                LOG.warning(f"BPA failed on region {i}: {e}")
+                m, _ = (
+                    o3d.geometry.TriangleMesh.create_from_point_cloud_poisson(
+                        pc, depth=8
+                    )
+                )
+                m = m.crop(pc.get_axis_aligned_bounding_box())
+
+            # post
+            m.remove_degenerate_triangles()
+            m.remove_duplicated_triangles()
+            m.remove_duplicated_vertices()
+            m.remove_non_manifold_edges()
+            if target and len(m.triangles) > target:
+                try:
+                    m = m.simplify_quadric_decimation(int(target))
+                except Exception:
+                    pass
+            m.compute_vertex_normals()
+            meshes.append(m)
+        except Exception as e:
+            LOG.warning(f"region {i} mesh build failed: {e}")
+            meshes.append(o3d.geometry.TriangleMesh())
+    return meshes
+
+
 def build_side_region_meshes(
     clouds: List[o3d.geometry.PointCloud],
     *,
+    ball_radius: float = 0.01,
+    target: int | None = None,
     prefer_poisson: bool = False,
 ) -> List[o3d.geometry.TriangleMesh]:
     meshes: List[o3d.geometry.TriangleMesh] = []
@@ -45,7 +131,7 @@ def build_side_region_meshes(
         if len(pc.points) < 100:
             meshes.append(o3d.geometry.TriangleMesh())
             continue
-        pc = o3d.geometry.PointCloud(pc)  # копия
+        pc = o3d.geometry.PointCloud(pc)
         h = _mean_spacing(pc)
         _ensure_normals(pc, radius=max(h * 3.0, 0.006))
 
@@ -53,16 +139,22 @@ def build_side_region_meshes(
             if prefer_poisson:
                 raise RuntimeError("force_poisson")
 
-            r = [h * 1.5, h * 2.2, h * 3.0]
             rec = (
                 o3d.geometry.TriangleMesh.create_from_point_cloud_ball_pivoting(
-                    pc, o3d.utility.DoubleVector(r)
+                    pc,
+                    o3d.utility.DoubleVector(
+                        [ball_radius, ball_radius * 2.0, ball_radius * 3.0]
+                    ),
                 )
             )
             rec.remove_degenerate_triangles()
             rec.remove_duplicated_triangles()
             rec.remove_duplicated_vertices()
             rec.remove_non_manifold_edges()
+
+            if target and len(rec.triangles) > target:
+                rec = rec.simplify_quadric_decimation(target)
+
             meshes.append(rec)
         except Exception as e:
             LOG.warning(f"BPA failed on region {i}: {e}")
@@ -188,6 +280,11 @@ def points_to_mesh_surface(
             mesh = mesh.simplify_quadric_decimation(target)
         except Exception:
             pass
+    try:
+        mesh.compute_triangle_normals()
+        mesh.orient_triangles()
+    except Exception:
+        pass
     mesh.compute_vertex_normals()
     mesh.paint_uniform_color((0.85, 0.85, 0.85))
     return mesh

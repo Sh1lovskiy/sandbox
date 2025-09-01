@@ -16,9 +16,10 @@ def build_tsdf(
     color_type,
 ) -> o3d.pipelines.integration.ScalableTSDFVolume:
     """Construct a scalable TSDF volume with given params."""
+    sdf_trunc = float(trunc if trunc is not None else voxel * 6.0)
     vol = o3d.pipelines.integration.ScalableTSDFVolume(
         voxel_length=voxel,
-        sdf_trunc=trunc,
+        sdf_trunc=sdf_trunc,
         color_type=color_type,
     )
     LOG.info(f"voxel={voxel:.4f} trunc={trunc:.4f}")
@@ -53,5 +54,6 @@ def extract_cloud(
     """Extract a point cloud from TSDF."""
     with suppress_o3d_info():
         pcd = vol.extract_point_cloud()
+
     LOG.info(f"extracted {len(pcd.points)} points before ROI")
     return pcd

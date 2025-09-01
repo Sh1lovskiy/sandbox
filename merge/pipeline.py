@@ -114,6 +114,11 @@ def _maybe_compact_preview(
     """Limit preview size to keep registration fast."""
     if len(preview.points) <= MAX_PREVIEW_POINTS:
         return preview
+    if not getattr(cfg, "merge_vox", None) or cfg.merge_vox <= 0:
+        LOG.warning(
+            f"[PREVIEW] skip voxel_down_sample: invalid merge_vox={cfg.merge_vox}"
+        )
+        return preview
     n0 = len(preview.points)
     preview = preview.voxel_down_sample(cfg.merge_vox)
     LOG.info(f"[ACC] compact preview {n0} -> {len(preview.points)}")
@@ -250,10 +255,12 @@ def merge_capture(root: Path, cfg: PipelineCfg) -> o3d.geometry.PointCloud:
         return merged
 
     n0 = len(merged.points)
-    merged = merged.voxel_down_sample(cfg.merge_vox)
-    LOG.info(
-        f"[FINAL] Downsample {n0} -> {len(merged.points)} @ {cfg.merge_vox:.4f}"
-    )
+    vox = getattr(cfg, "merge_vox", None)
+    if vox and vox > 0:
+        merged = merged.voxel_down_sample(vox)
+        LOG.info(f"[FINAL] Downsample {n0} -> {len(merged.points)} @ {vox:.4f}")
+    else:
+        LOG.info(f"[FINAL] skip voxel_down_sample (merge_vox={vox})")
 
     if cfg.remove_outliers and len(merged.points) > 2000:
         _, idx = merged.remove_statistical_outlier(

@@ -73,8 +73,8 @@ class PipelineCfg:
     merge_strategy: Literal["pcd", "tsdf"] = "tsdf"
 
     # Per-frame / final processing
-    frame_vox: float = 0.003
-    merge_vox: float = 0.002
+    frame_vox: float = 0.0
+    merge_vox: float = 0.0
     remove_outliers: bool = True
     outlier_nn: int = 20
     outlier_std: float = 2.0
