@@ -83,3 +83,32 @@ class TerminalEchoSuppressor:
         finally:
             self.enabled = False
             self.logger.debug("Terminal echo restored")
+
+
+class KeyHandler:
+    """Register Open3D key callbacks with unified logging."""
+
+    def __init__(self, vis) -> None:
+        self.vis = vis
+        self.logger = Logger.get_logger("keyhandler")
+
+    def _wrap(self, fn: KeyAction):
+        def _cb(v):
+            try:
+                fn()
+            except Exception as e:
+                self.logger.error(f"hotkey callback failed: {e}")
+            try:
+                v.update_renderer()
+            except Exception:
+                pass
+            return True
+
+        return _cb
+
+    def register(self, mapping: Dict[str, KeyAction]) -> None:
+        for key, fn in mapping.items():
+            try:
+                self.vis.register_key_callback(ord(key), self._wrap(fn))
+            except Exception as e:
+                self.logger.error(f"failed to register '{key}': {e}")
